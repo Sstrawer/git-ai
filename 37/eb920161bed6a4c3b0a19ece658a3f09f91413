@@ -1,0 +1,34 @@
+src/commands/checkpoint_agent/bash_tool.rs
+  h_b343c3c4f99196 400-408,428
+src/commands/checkpoint_agent/presets/mod.rs
+  h_b343c3c4f99196 23,174
+src/commands/checkpoint_agent/presets/zcode.rs
+  h_b343c3c4f99196 1-375
+src/mdm/agents/mod.rs
+  h_b343c3c4f99196 19,39,67
+src/mdm/agents/zcode.rs
+  h_b343c3c4f99196 1-702
+tests/integration/bash_tool_conformance.rs
+  h_b343c3c4f99196 695-723
+tests/integration/fuzzer/helpers.rs
+  h_b343c3c4f99196 18
+tests/integration/main.rs
+  h_b343c3c4f99196 158
+tests/integration/repos/test_file.rs
+  h_b343c3c4f99196 25
+tests/integration/repos/test_repo.rs
+  h_b343c3c4f99196 1050
+tests/integration/zcode.rs
+  h_b343c3c4f99196 1-323
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "development:1.7.6",
+  "base_commit_sha": "37eb920161bed6a4c3b0a19ece658a3f09f91413",
+  "prompts": {},
+  "humans": {
+    "h_b343c3c4f99196": {
+      "author": "yangtao <taoyangdd@isoftstone.com>"
+    }
+  }
+}
