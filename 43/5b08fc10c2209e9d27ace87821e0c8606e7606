@@ -1,0 +1,14 @@
+src/mdm/agents/trae_cli.rs
+  h_b343c3c4f99196 23,29,35,48-49,52,63,90,114,134,149,155,160,212,335,389,533,571-579
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "development:1.7.6",
+  "base_commit_sha": "435b08fc10c2209e9d27ace87821e0c8606e7606",
+  "prompts": {},
+  "humans": {
+    "h_b343c3c4f99196": {
+      "author": "yangtao <taoyangdd@isoftstone.com>"
+    }
+  }
+}
