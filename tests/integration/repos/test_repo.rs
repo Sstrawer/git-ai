@@ -1047,6 +1047,7 @@ fn is_known_checkpoint_preset(arg: &str) -> bool {
             | "droid"
             | "agent-v1"
             | "trae"
+            | "zcode"
     )
 }
 

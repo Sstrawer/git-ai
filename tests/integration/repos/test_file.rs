@@ -22,6 +22,7 @@ const AI_AUTHOR_NAMES: &[&str] = &[
     "git-ai-cloud-agent",
     "agent-v1",
     "trae",
+    "zcode",
 ];
 
 #[derive(Debug, Clone, PartialEq)]

@@ -692,6 +692,35 @@ fn test_classify_tool_trae() {
     assert_eq!(classify_tool(Agent::Trae, "unknown"), ToolClass::Skip);
 }
 
+#[test]
+fn test_classify_tool_zcode() {
+    // ZCode uses Claude-Code-style tool names: Write/Edit for file
+    // mutation, Bash for terminal commands; everything else is skipped.
+    // ApplyPatch is supported for codex-family model compatibility.
+    assert_eq!(classify_tool(Agent::ZCode, "Write"), ToolClass::FileEdit);
+    assert_eq!(classify_tool(Agent::ZCode, "Edit"), ToolClass::FileEdit);
+    assert_eq!(
+        classify_tool(Agent::ZCode, "ApplyPatch"),
+        ToolClass::FileEdit
+    );
+    assert_eq!(classify_tool(Agent::ZCode, "Bash"), ToolClass::Bash);
+    assert_eq!(classify_tool(Agent::ZCode, "RunCommand"), ToolClass::Bash);
+    assert_eq!(classify_tool(Agent::ZCode, "Read"), ToolClass::Skip);
+    assert_eq!(classify_tool(Agent::ZCode, "Glob"), ToolClass::Skip);
+    assert_eq!(classify_tool(Agent::ZCode, "Grep"), ToolClass::Skip);
+    assert_eq!(classify_tool(Agent::ZCode, "TodoWrite"), ToolClass::Skip);
+    assert_eq!(
+        classify_tool(Agent::ZCode, "AskUserQuestion"),
+        ToolClass::Skip
+    );
+    assert_eq!(classify_tool(Agent::ZCode, "WebSearch"), ToolClass::Skip);
+    assert_eq!(
+        classify_tool(Agent::ZCode, "mcp__server__tool"),
+        ToolClass::Skip
+    );
+    assert_eq!(classify_tool(Agent::ZCode, "unknown"), ToolClass::Skip);
+}
+
 // ===========================================================================
 // Gitignore Filtering
 // ===========================================================================

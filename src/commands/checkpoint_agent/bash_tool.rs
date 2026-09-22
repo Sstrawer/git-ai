@@ -397,6 +397,15 @@ pub fn classify_tool(agent: Agent, tool_name: &str) -> ToolClass {
             "RunCommand" | "Bash" => ToolClass::Bash,
             _ => ToolClass::Skip,
         },
+        // ZCode (see ZCode "Hooks" doc) uses Claude-Code-style tool names:
+        // Write/Edit for file mutation, Bash for terminal commands.
+        // ApplyPatch is supported via the shared OpenCode patch-text
+        // extractor for codex-family model compatibility.
+        Agent::ZCode => match tool_name {
+            "Write" | "Edit" | "ApplyPatch" => ToolClass::FileEdit,
+            "Bash" | "RunCommand" => ToolClass::Bash,
+            _ => ToolClass::Skip,
+        },
     }
 }
 
@@ -416,6 +425,7 @@ pub enum Agent {
     Cursor,
     Cline,
     Trae,
+    ZCode,
 }
 
 // ---------------------------------------------------------------------------
