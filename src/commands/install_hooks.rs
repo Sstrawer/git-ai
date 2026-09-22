@@ -5,7 +5,7 @@ use crate::mdm::agents::get_all_installers;
 use crate::mdm::hook_installer::HookInstallerParams;
 use crate::mdm::skills_installer;
 use crate::mdm::spinner::{Spinner, print_diff};
-use crate::mdm::utils::get_current_binary_path;
+use crate::mdm::utils::{binary_exists, get_current_binary_path};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -813,6 +813,10 @@ async fn async_run_install(
     // Warn if git version is below the minimum required for full functionality
     warn_if_git_version_too_old();
 
+    // Warn when hooks for installed agents cannot execute because `sh` is
+    // missing from PATH.
+    warn_if_sh_missing(&detailed_results);
+
     Ok(statuses)
 }
 
@@ -879,6 +883,64 @@ fn warn_if_git_version_too_old() {
             eprintln!();
         }
     }
+}
+
+/// Agents whose hook commands the tool itself executes via `sh -c`, so
+/// their hooks require `sh` on PATH. Maps (installer id, display name);
+/// keep ids in sync with `get_all_installers()`.
+///
+/// Only agents with verified `sh` execution belong here: most agents run
+/// hook command strings through the system shell (cmd.exe / PowerShell)
+/// and work without `sh`.
+const SH_REQUIRING_AGENTS: &[(&str, &str)] = &[
+    // trae-cli spawns hooks with `sh -c` even on Windows; without sh.exe on
+    // PATH the hooks fail silently (observed in trae-cli session logs:
+    // `exec: "sh": executable file not found in %PATH%`).
+    ("trae-cli", "TRAE CLI"),
+];
+
+/// Display names of the sh-requiring agents that were found installed in
+/// this install run. Tools whose check reported `NotFound` are excluded;
+/// hook-install failures still count (the tool itself is present).
+fn installed_sh_requiring_agents(results: &[(String, InstallResult)]) -> Vec<&'static str> {
+    SH_REQUIRING_AGENTS
+        .iter()
+        .filter(|(id, _)| {
+            results
+                .iter()
+                .any(|(tool_id, result)| tool_id == id && result.status != InstallStatus::NotFound)
+        })
+        .map(|(_, name)| *name)
+        .collect()
+}
+
+/// Warn when hooks for installed agents cannot execute because `sh` is
+/// missing from PATH. In practice this only fires on Windows: Unix systems
+/// always ship a POSIX `sh`, while on Windows `sh.exe` comes only with Git
+/// for Windows (whose `bin` directory is not added to PATH by default).
+fn warn_if_sh_missing(results: &[(String, InstallResult)]) {
+    if binary_exists("sh") {
+        return;
+    }
+    let agents = installed_sh_requiring_agents(results);
+    if agents.is_empty() {
+        return;
+    }
+
+    eprintln!();
+    eprintln!("\x1b[1;31m╔══════════════════════════════════════════════════════════════╗\x1b[0m");
+    eprintln!("\x1b[1;31m║  WARNING: `sh` not found — agent hooks will not run          ║\x1b[0m");
+    eprintln!("\x1b[1;31m╚══════════════════════════════════════════════════════════════╝\x1b[0m");
+    eprintln!("\x1b[1;31mThe following installed agents execute hooks via `sh`:\x1b[0m");
+    for name in agents {
+        eprintln!("  - {name}");
+    }
+    eprintln!("\x1b[33mWithout `sh` on PATH, their hooks fail silently and AI edits\x1b[0m");
+    eprintln!("\x1b[33mwill not be attributed.\x1b[0m");
+    eprintln!();
+    eprintln!("Fix: add Git for Windows' bin directory (contains sh.exe) to PATH,");
+    eprintln!("e.g. \"D:\\Program Files\\Git\\bin\", then restart your terminal.");
+    eprintln!();
 }
 
 /// Emit metrics events for install-hooks results
@@ -1233,6 +1295,44 @@ mod tests {
         let err = parse_install_options(&args).unwrap_err();
 
         assert!(err.to_string().contains("missing value for --api-base"));
+    }
+
+    fn detail(id: &str, result: InstallResult) -> (String, InstallResult) {
+        (id.to_string(), result)
+    }
+
+    #[test]
+    fn sh_requiring_agents_include_installed_trae_cli() {
+        let results = vec![
+            detail("trae-cli", InstallResult::already_installed()),
+            detail("vscode", InstallResult::already_installed()),
+        ];
+
+        assert_eq!(installed_sh_requiring_agents(&results), vec!["TRAE CLI"]);
+    }
+
+    #[test]
+    fn sh_requiring_agents_include_hook_install_failures() {
+        // The tool itself is installed even when hook installation failed,
+        // so it still belongs in the warning.
+        let results = vec![detail("trae-cli", InstallResult::failed("boom"))];
+
+        assert_eq!(installed_sh_requiring_agents(&results), vec!["TRAE CLI"]);
+    }
+
+    #[test]
+    fn sh_requiring_agents_exclude_not_found_and_unaffected_tools() {
+        let results = vec![
+            detail("trae-cli", InstallResult::not_found()),
+            detail("vscode", InstallResult::installed()),
+        ];
+
+        assert_eq!(installed_sh_requiring_agents(&results), Vec::<&str>::new());
+    }
+
+    #[test]
+    fn sh_requiring_agents_empty_for_no_results() {
+        assert_eq!(installed_sh_requiring_agents(&[]), Vec::<&str>::new());
     }
 
     #[test]
