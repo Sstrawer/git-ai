@@ -20,19 +20,19 @@ const DEFAULT_ENTRY_INDENT: usize = 2;
 /// Hook installer for TRAE CLI (`trae-cli`).
 ///
 /// TraeCLI reads hooks from a YAML config: a top-level `hooks:` list in
-/// `~/.trae/traecli.yaml` whose entries are maps with
+/// `~/.trae/trae_cli.yaml` whose entries are maps with
 /// `type`/`command`/`timeout`/`matchers` keys. The stdin payloads are
 /// Claude-Code-style and are handled by the shared `trae` preset, so the
 /// installed command reuses `checkpoint trae`.
 ///
 /// The config is edited line-by-line rather than through a YAML
-/// serializer: real traecli.yaml files are small flat maps, and surgical
+/// serializer: real trae_cli.yaml files are small flat maps, and surgical
 /// line editing preserves user formatting and comments. Unsupported
 /// layouts (flow-style `hooks: []`, a nested `hooks:` key) fail closed
 /// with an error instead of risking file corruption.
 pub struct TraeCliInstaller;
 
-/// A parsed top-level `hooks:` block in a traecli.yaml file.
+/// A parsed top-level `hooks:` block in a trae_cli.yaml file.
 struct HooksBlock {
     /// Line index of the `hooks:` key.
     key_idx: usize,
@@ -45,11 +45,11 @@ struct HooksBlock {
 }
 
 impl TraeCliInstaller {
-    /// TraeCLI reads user-level hooks from `~/.trae/traecli.yaml`
-    /// (project-level `.trae/traecli.yaml` overrides it, but machine-wide
+    /// TraeCLI reads user-level hooks from `~/.trae/trae_cli.yaml`
+    /// (project-level `.trae/trae_cli.yaml` overrides it, but machine-wide
     /// installs target the user config).
     fn config_path() -> PathBuf {
-        home_dir().join(".trae").join("traecli.yaml")
+        home_dir().join(".trae").join("trae_cli.yaml")
     }
 
     fn desired_command(binary_path: &Path) -> String {
@@ -60,7 +60,7 @@ impl TraeCliInstaller {
         )
     }
 
-    /// Install hooks into a traecli.yaml file, returning a diff if changes
+    /// Install hooks into a trae_cli.yaml file, returning a diff if changes
     /// were made.
     fn install_hooks_at(
         config_path: &Path,
@@ -87,7 +87,7 @@ impl TraeCliInstaller {
         Ok(Some(diff_output))
     }
 
-    /// Remove hooks from a traecli.yaml file, returning a diff if changes
+    /// Remove hooks from a trae_cli.yaml file, returning a diff if changes
     /// were made.
     fn uninstall_hooks_at(config_path: &Path, dry_run: bool) -> Result<Option<String>, GitAiError> {
         if !config_path.exists() {
@@ -111,7 +111,7 @@ impl TraeCliInstaller {
 }
 
 // ---------------------------------------------------------------------------
-// traecli.yaml `hooks:` block editing
+// trae_cli.yaml `hooks:` block editing
 // ---------------------------------------------------------------------------
 
 /// Split file content into lines (trailing `\r` stripped) plus whether the
@@ -131,7 +131,7 @@ fn join_lines(lines: &[String], crlf: bool) -> String {
     lines.join(sep)
 }
 
-/// Find the top-level `hooks:` block in a traecli.yaml file.
+/// Find the top-level `hooks:` block in a trae_cli.yaml file.
 ///
 /// Returns `Ok(None)` when the file has no `hooks:` key. Returns an error
 /// for layouts that cannot be edited safely (flow-style values, nested or
@@ -146,18 +146,18 @@ fn parse_hooks_block(lines: &[String]) -> Result<Option<HooksBlock>, GitAiError>
             let rest = rest.trim();
             if !rest.is_empty() && !rest.starts_with('#') {
                 return Err(GitAiError::Generic(
-                    "traecli.yaml uses a flow-style `hooks:` value; refusing to edit it automatically"
+                    "trae_cli.yaml uses a flow-style `hooks:` value; refusing to edit it automatically"
                         .to_string(),
                 ));
             }
             if key_idx.replace(idx).is_some() {
                 return Err(GitAiError::Generic(
-                    "traecli.yaml has duplicate top-level `hooks:` keys".to_string(),
+                    "trae_cli.yaml has duplicate top-level `hooks:` keys".to_string(),
                 ));
             }
         } else if line.trim_start().starts_with("hooks:") {
             return Err(GitAiError::Generic(
-                "traecli.yaml has a nested `hooks:` key; refusing to edit it automatically"
+                "trae_cli.yaml has a nested `hooks:` key; refusing to edit it automatically"
                     .to_string(),
             ));
         }
@@ -209,7 +209,7 @@ fn parse_hooks_block(lines: &[String]) -> Result<Option<HooksBlock>, GitAiError>
             Some(ei) if indent > ei => {}
             Some(_) => {
                 return Err(GitAiError::Generic(
-                    "traecli.yaml `hooks:` entries have inconsistent indentation; refusing to edit it automatically"
+                    "trae_cli.yaml `hooks:` entries have inconsistent indentation; refusing to edit it automatically"
                         .to_string(),
                 ));
             }
@@ -332,7 +332,7 @@ fn rebuild_file(
     join_lines(&out, crlf)
 }
 
-/// Add or update our hook entry in traecli.yaml content.
+/// Add or update our hook entry in trae_cli.yaml content.
 ///
 /// Returns `Ok(None)` when the file already contains our entry in the
 /// canonical form. All other content is preserved byte-for-byte.
@@ -386,7 +386,7 @@ fn merge_hooks_entry(existing: &str, desired_cmd: &str) -> Result<Option<String>
     Ok(Some(new_content))
 }
 
-/// Remove our hook entries from traecli.yaml content.
+/// Remove our hook entries from trae_cli.yaml content.
 ///
 /// Returns `Ok(None)` when nothing needs removing. When the block holds
 /// no other content afterwards, the `hooks:` key is removed too.
@@ -530,7 +530,7 @@ mod tests {
 
     fn setup_test_env() -> (TempDir, PathBuf) {
         let temp_dir = TempDir::new().unwrap();
-        let config_path = temp_dir.path().join("traecli.yaml");
+        let config_path = temp_dir.path().join("trae_cli.yaml");
         (temp_dir, config_path)
     }
 
@@ -566,6 +566,15 @@ mod tests {
     fn test_trae_cli_installer_id() {
         assert_eq!(TraeCliInstaller.id(), "trae-cli");
         assert_eq!(TraeCliInstaller.name(), "TRAE CLI");
+    }
+
+    #[test]
+    fn s0_config_path_uses_underscore_filename() {
+        // trae-cli reads `~/.trae/trae_cli.yaml` (underscore), matching the
+        // file it writes at login; `trae_cli.yaml` (no underscore) is ignored.
+        let path = TraeCliInstaller::config_path();
+        assert_eq!(path.parent().unwrap(), home_dir().join(".trae"));
+        assert_eq!(path.file_name().unwrap(), "trae_cli.yaml");
     }
 
     #[test]
