@@ -11,6 +11,7 @@ mod jetbrains;
 mod opencode;
 mod pi;
 mod trae;
+mod trae_cli;
 #[cfg(windows)]
 mod visual_studio;
 mod vscode;
@@ -29,6 +30,7 @@ pub use jetbrains::JetBrainsInstaller;
 pub use opencode::OpenCodeInstaller;
 pub use pi::PiInstaller;
 pub use trae::TraeInstaller;
+pub use trae_cli::TraeCliInstaller;
 #[cfg(windows)]
 pub use visual_studio::VisualStudioInstaller;
 pub use vscode::VSCodeInstaller;
@@ -59,5 +61,6 @@ pub fn get_all_installers() -> Vec<Box<dyn HookInstaller>> {
 
     installers.push(Box::new(WindsurfInstaller));
     installers.push(Box::new(TraeInstaller));
+    installers.push(Box::new(TraeCliInstaller));
     installers
 }

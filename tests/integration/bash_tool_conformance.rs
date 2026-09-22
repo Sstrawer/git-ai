@@ -665,11 +665,25 @@ fn test_classify_tool_codex() {
 fn test_classify_tool_trae() {
     // TraeCode standardized tool names: Write/Edit for file mutation,
     // RunCommand for terminal commands; everything else is skipped.
+    // TraeCLI shares the preset: Bash is the terminal tool and ApplyPatch
+    // (codex-family models) mutates files via patch text.
     assert_eq!(classify_tool(Agent::Trae, "Write"), ToolClass::FileEdit);
     assert_eq!(classify_tool(Agent::Trae, "Edit"), ToolClass::FileEdit);
+    assert_eq!(
+        classify_tool(Agent::Trae, "ApplyPatch"),
+        ToolClass::FileEdit
+    );
     assert_eq!(classify_tool(Agent::Trae, "RunCommand"), ToolClass::Bash);
+    assert_eq!(classify_tool(Agent::Trae, "Bash"), ToolClass::Bash);
     assert_eq!(classify_tool(Agent::Trae, "Read"), ToolClass::Skip);
     assert_eq!(classify_tool(Agent::Trae, "Glob"), ToolClass::Skip);
+    assert_eq!(classify_tool(Agent::Trae, "Grep"), ToolClass::Skip);
+    assert_eq!(classify_tool(Agent::Trae, "BashOutput"), ToolClass::Skip);
+    assert_eq!(classify_tool(Agent::Trae, "TodoWrite"), ToolClass::Skip);
+    assert_eq!(
+        classify_tool(Agent::Trae, "AskUserQuestion"),
+        ToolClass::Skip
+    );
     assert_eq!(classify_tool(Agent::Trae, "WebSearch"), ToolClass::Skip);
     assert_eq!(
         classify_tool(Agent::Trae, "mcp__server__tool"),

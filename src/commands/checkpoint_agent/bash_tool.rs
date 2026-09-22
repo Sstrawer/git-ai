@@ -387,11 +387,14 @@ pub fn classify_tool(agent: Agent, tool_name: &str) -> ToolClass {
                 _ => ToolClass::Skip,
             }
         }
-        // TraeCode standardized tool names (see TRAE Hook 配置详解):
-        // file mutation tools Write/Edit, terminal tool RunCommand.
+        // TraeCode (IDE) standardized tool names (see TRAE "Hook 配置详解"):
+        // file mutation tools Write/Edit, terminal tool RunCommand. TraeCLI
+        // (trae-cli) uses Bash for terminal commands and ApplyPatch for file
+        // mutations under codex-family models (see TraeCLI "Tools 参考");
+        // both share the `trae` preset, so all names classify here.
         Agent::Trae => match tool_name {
-            "Write" | "Edit" => ToolClass::FileEdit,
-            "RunCommand" => ToolClass::Bash,
+            "Write" | "Edit" | "ApplyPatch" => ToolClass::FileEdit,
+            "RunCommand" | "Bash" => ToolClass::Bash,
             _ => ToolClass::Skip,
         },
     }

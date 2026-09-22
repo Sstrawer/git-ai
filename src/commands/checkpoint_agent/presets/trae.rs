@@ -1,3 +1,4 @@
+use super::opencode::OpenCodePreset;
 use super::parse;
 use super::{
     AgentPreset, ParsedHookEvent, PostBashCall, PostFileEdit, PreBashCall, PreFileEdit,
@@ -18,7 +19,29 @@ use std::path::PathBuf;
 /// `tool_input` with the file path or command. TRAE payloads do not carry a
 /// transcript path or model name, so no stream source is attached and the
 /// model stays "unknown" until transcript streaming support is added.
+///
+/// The same preset also serves TraeCLI (`trae-cli`): its hook payloads use
+/// the same Claude-Code-style shape with `Bash` as the terminal tool name
+/// and `ApplyPatch` (codex-family models) for file edits whose paths are
+/// embedded in the patch text. TraeCLI-only fields (`agent_id`, `agent_type`,
+/// `permission_mode`, `transcript_path`) are optional and ignored here.
 pub struct TraePreset;
+
+impl TraePreset {
+    /// Extract edited file paths from `tool_input`.
+    ///
+    /// `Write`/`Edit` carry a `file_path` key; `ApplyPatch` embeds the edited
+    /// paths in the patch text (same format as Codex), extracted via the
+    /// shared OpenCode helper.
+    fn file_paths_for_edit(data: &serde_json::Value, cwd: &str) -> Vec<PathBuf> {
+        let mut paths = parse::file_paths_from_tool_input(data, cwd);
+        if paths.is_empty() {
+            let tool_input = data.get("tool_input").or_else(|| data.get("toolInput"));
+            paths = OpenCodePreset::extract_filepaths_from_tool_input(tool_input, cwd);
+        }
+        paths
+    }
+}
 
 impl AgentPreset for TraePreset {
     fn parse(&self, hook_input: &str, trace_id: &str) -> Result<Vec<ParsedHookEvent>, GitAiError> {
@@ -60,7 +83,7 @@ impl AgentPreset for TraePreset {
             }),
             (Some("PreToolUse"), false) => ParsedHookEvent::PreFileEdit(PreFileEdit {
                 context,
-                file_paths: parse::file_paths_from_tool_input(&data, cwd),
+                file_paths: Self::file_paths_for_edit(&data, cwd),
                 dirty_files: None,
                 tool_use_id: Some(tool_use_id.to_string()),
             }),
@@ -72,7 +95,7 @@ impl AgentPreset for TraePreset {
             }),
             (Some("PostToolUse"), false) => ParsedHookEvent::PostFileEdit(PostFileEdit {
                 context,
-                file_paths: parse::file_paths_from_tool_input(&data, cwd),
+                file_paths: Self::file_paths_for_edit(&data, cwd),
                 dirty_files: None,
                 stream_source: None,
                 tool_use_id: Some(tool_use_id.to_string()),
@@ -192,6 +215,133 @@ mod tests {
                 assert!(e.stream_source.is_none());
             }
             _ => panic!("Expected PostBashCall"),
+        }
+    }
+
+    #[test]
+    fn test_trae_cli_bash_tool_name() {
+        // TraeCLI uses `Bash` as the terminal tool name; CLI-only fields
+        // (agent_id, agent_type, permission_mode) are tolerated and ignored.
+        let input = json!({
+            "session_id": "sess-cli",
+            "agent_id": "550e8400-e29b-41d4-a716-446655440000",
+            "agent_type": "Explore",
+            "cwd": "/home/user/project",
+            "permission_mode": "default",
+            "hook_event_name": "PreToolUse",
+            "tool_use_id": "tu-cli-1",
+            "tool_name": "Bash",
+            "tool_input": {
+                "command": "cargo test",
+                "description": "run tests",
+                "run_in_background": false,
+                "timeout": 30000
+            }
+        })
+        .to_string();
+        let events = TraePreset.parse(&input, "t_test123456789a").unwrap();
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            ParsedHookEvent::PreBashCall(e) => {
+                assert_eq!(e.context.agent_id.tool, "trae");
+                assert_eq!(e.context.external_session_id, "sess-cli");
+                assert_eq!(e.tool_use_id, "tu-cli-1");
+                assert_eq!(e.command.as_deref(), Some("cargo test"));
+            }
+            _ => panic!("Expected PreBashCall"),
+        }
+    }
+
+    #[test]
+    fn test_trae_cli_apply_patch_pre_file_edit() {
+        // TraeCLI codex-family models edit files via ApplyPatch; the edited
+        // paths are embedded in the patch text, not in a file_path key.
+        let input = json!({
+            "session_id": "sess-cli",
+            "agent_id": "550e8400-e29b-41d4-a716-446655440000",
+            "cwd": "/home/user/project",
+            "hook_event_name": "PreToolUse",
+            "tool_use_id": "tu-cli-2",
+            "tool_name": "ApplyPatch",
+            "tool_input": {
+                "patch": "*** Begin Patch\n*** Update File: src/main.rs\n@@\n-old\n+new\n*** Update File: src/lib.rs\n@@\n-a\n+b\n*** End Patch"
+            }
+        })
+        .to_string();
+        let events = TraePreset.parse(&input, "t_test123456789a").unwrap();
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            ParsedHookEvent::PreFileEdit(e) => {
+                assert_eq!(
+                    e.file_paths,
+                    vec![
+                        PathBuf::from("/home/user/project/src/main.rs"),
+                        PathBuf::from("/home/user/project/src/lib.rs")
+                    ]
+                );
+                assert_eq!(e.tool_use_id.as_deref(), Some("tu-cli-2"));
+            }
+            _ => panic!("Expected PreFileEdit"),
+        }
+    }
+
+    #[test]
+    fn test_trae_cli_apply_patch_post_file_edit() {
+        let input = json!({
+            "session_id": "sess-cli",
+            "agent_id": "550e8400-e29b-41d4-a716-446655440000",
+            "cwd": "/home/user/project",
+            "hook_event_name": "PostToolUse",
+            "tool_use_id": "tu-cli-3",
+            "tool_name": "ApplyPatch",
+            "tool_input": {
+                "patch": "*** Begin Patch\n*** Add File: docs/new.md\n@@\n+hello\n*** End Patch"
+            }
+        })
+        .to_string();
+        let events = TraePreset.parse(&input, "t_test123456789a").unwrap();
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            ParsedHookEvent::PostFileEdit(e) => {
+                assert_eq!(
+                    e.file_paths,
+                    vec![PathBuf::from("/home/user/project/docs/new.md")]
+                );
+            }
+            _ => panic!("Expected PostFileEdit"),
+        }
+    }
+
+    #[test]
+    fn test_trae_cli_nested_event_duplicate_fields() {
+        // TraeCLI repeats tool fields in a nested object named after the
+        // event; the top-level fields must remain authoritative.
+        let input = json!({
+            "session_id": "sess-cli",
+            "agent_id": "550e8400-e29b-41d4-a716-446655440000",
+            "cwd": "/home/user/project",
+            "hook_event_name": "PostToolUse",
+            "tool_use_id": "tu-cli-4",
+            "tool_name": "Write",
+            "tool_input": {"file_path": "src/top.rs", "content": "fn main() {}"},
+            "tool_response": {"success": true},
+            "post_tool_use": {
+                "tool_name": "Write",
+                "tool_input": {"file_path": "src/nested.rs", "content": "fn nested() {}"},
+                "cwd": "/home/user/project"
+            }
+        })
+        .to_string();
+        let events = TraePreset.parse(&input, "t_test123456789a").unwrap();
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            ParsedHookEvent::PostFileEdit(e) => {
+                assert_eq!(
+                    e.file_paths,
+                    vec![PathBuf::from("/home/user/project/src/top.rs")]
+                );
+            }
+            _ => panic!("Expected PostFileEdit"),
         }
     }
 
