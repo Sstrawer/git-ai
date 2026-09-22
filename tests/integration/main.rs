@@ -148,6 +148,7 @@ mod sweep_e2e;
 mod test_utils_unit;
 mod tls_native_certs;
 mod token_usage;
+mod trae;
 mod untraced_commit_fixup;
 mod usage_period;
 mod utf8_filenames;

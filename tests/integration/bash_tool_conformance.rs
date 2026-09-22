@@ -661,6 +661,23 @@ fn test_classify_tool_codex() {
     assert_eq!(classify_tool(Agent::Codex, "unknown"), ToolClass::Skip);
 }
 
+#[test]
+fn test_classify_tool_trae() {
+    // TraeCode standardized tool names: Write/Edit for file mutation,
+    // RunCommand for terminal commands; everything else is skipped.
+    assert_eq!(classify_tool(Agent::Trae, "Write"), ToolClass::FileEdit);
+    assert_eq!(classify_tool(Agent::Trae, "Edit"), ToolClass::FileEdit);
+    assert_eq!(classify_tool(Agent::Trae, "RunCommand"), ToolClass::Bash);
+    assert_eq!(classify_tool(Agent::Trae, "Read"), ToolClass::Skip);
+    assert_eq!(classify_tool(Agent::Trae, "Glob"), ToolClass::Skip);
+    assert_eq!(classify_tool(Agent::Trae, "WebSearch"), ToolClass::Skip);
+    assert_eq!(
+        classify_tool(Agent::Trae, "mcp__server__tool"),
+        ToolClass::Skip
+    );
+    assert_eq!(classify_tool(Agent::Trae, "unknown"), ToolClass::Skip);
+}
+
 // ===========================================================================
 // Gitignore Filtering
 // ===========================================================================

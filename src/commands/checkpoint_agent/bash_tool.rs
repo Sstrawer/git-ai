@@ -387,6 +387,13 @@ pub fn classify_tool(agent: Agent, tool_name: &str) -> ToolClass {
                 _ => ToolClass::Skip,
             }
         }
+        // TraeCode standardized tool names (see TRAE Hook 配置详解):
+        // file mutation tools Write/Edit, terminal tool RunCommand.
+        Agent::Trae => match tool_name {
+            "Write" | "Edit" => ToolClass::FileEdit,
+            "RunCommand" => ToolClass::Bash,
+            _ => ToolClass::Skip,
+        },
     }
 }
 
@@ -405,6 +412,7 @@ pub enum Agent {
     Windsurf,
     Cursor,
     Cline,
+    Trae,
 }
 
 // ---------------------------------------------------------------------------
