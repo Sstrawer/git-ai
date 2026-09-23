@@ -1,0 +1,21 @@
+tests/integration/console_self_hide.rs
+  s_fe0077bdff93d5::t_14ab942abb7c6c 1-122
+tests/integration/main.rs
+  s_fe0077bdff93d5::t_931f7b4dfb2c5e 51-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "development:1.7.6",
+  "base_commit_sha": "65597fdad030300878826bfb37c96d5fe5e39801",
+  "prompts": {},
+  "sessions": {
+    "s_fe0077bdff93d5": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6ab3554a997ec9e29529e684",
+        "model": "glm-5.3__dev"
+      },
+      "human_author": "yangtao <taoyangdd@isoftstone.com>"
+    }
+  }
+}
