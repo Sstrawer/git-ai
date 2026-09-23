@@ -14,6 +14,18 @@ fn parse_opencode(hook_input: &str) -> Result<Vec<ParsedHookEvent>, GitAiError> 
     resolve_preset("opencode")?.parse(hook_input, "t_test")
 }
 
+#[test]
+fn opencode_plugin_spawns_checkpoint_with_windows_hide() {
+    let plugin = fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("agent-support/opencode/git-ai.ts"),
+    )
+    .expect("opencode plugin source must exist");
+    assert!(
+        plugin.contains("windowsHide: true"),
+        "opencode plugin must spawn git-ai with windowsHide: true to avoid console popups on Windows"
+    );
+}
+
 fn opencode_sqlite_fixture_path() -> std::path::PathBuf {
     fixture_path("opencode-sqlite")
 }
