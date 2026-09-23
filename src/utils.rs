@@ -108,6 +108,64 @@ pub fn is_interactive_terminal() -> bool {
     *IS_TERMINAL.get_or_init(|| std::io::stdin().is_terminal())
 }
 
+/// Decide whether the console window of a freshly started process should be
+/// hidden.
+///
+/// The window is hidden only when all of the following hold:
+/// - a console window exists,
+/// - this process is the *sole* process attached to the console (i.e. the OS
+///   allocated a fresh console for us because our parent had none),
+/// - stdin is not an interactive terminal (so the window belongs to a
+///   non-interactive spawn, not e.g. a terminal profile running `git` directly).
+#[cfg(windows)]
+fn should_hide_console(has_window: bool, attached_processes: u32, stdin_is_terminal: bool) -> bool {
+    has_window && attached_processes == 1 && !stdin_is_terminal
+}
+
+/// Hide this process's console window when it is the sole occupant of a
+/// console it did not inherit.
+///
+/// When a console-less parent (e.g. OpenCode's Bun runtime spawning `git`
+/// without `CREATE_NO_WINDOW`/`windowsHide`) launches this binary, the OS
+/// allocates a new console whose window pops up for the whole command
+/// duration, titled with the executable path. Hiding the window suppresses
+/// that popup. Interactive usage is never affected: when a shell shares the
+/// console, the attached-process count is >= 2, and interactive stdin is
+/// always kept visible.
+#[cfg(windows)]
+pub fn hide_console_if_unshared() {
+    use std::ffi::c_void;
+
+    type Hwnd = *mut c_void;
+
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn GetConsoleWindow() -> Hwnd;
+        fn GetConsoleProcessList(process_list: *mut u32, process_count: u32) -> u32;
+        fn ShowWindow(window: Hwnd, show_command: i32) -> i32;
+    }
+
+    const SW_HIDE: i32 = 0;
+
+    let window = unsafe { GetConsoleWindow() };
+    let has_window = !window.is_null();
+    let mut processes = [0u32; 8];
+    let attached = unsafe { GetConsoleProcessList(processes.as_mut_ptr(), processes.len() as u32) };
+    let stdin_is_terminal = std::io::stdin().is_terminal();
+
+    let hid_window = should_hide_console(has_window, attached, stdin_is_terminal);
+    if hid_window {
+        unsafe { ShowWindow(window, SW_HIDE) };
+    }
+
+    if std::env::var_os("GIT_AI_TEST_CONSOLE_REPORT").is_some() {
+        eprintln!(
+            "[git-ai] console self-hide: window={} attached={} stdin_terminal={} hidden={}",
+            has_window as u8, attached, stdin_is_terminal as u8, hid_window as u8
+        );
+    }
+}
+
 /// Returns true if the process is running inside a background AI agent environment.
 pub fn is_in_background_agent() -> bool {
     !matches!(
@@ -1232,6 +1290,26 @@ mod tests {
     fn test_is_interactive_terminal() {
         // Just call it to ensure it doesn't panic
         let _ = is_interactive_terminal();
+    }
+
+    // =========================================================================
+    // Console self-hide Tests
+    // =========================================================================
+
+    #[cfg(windows)]
+    #[test]
+    fn test_should_hide_console_truth_table() {
+        // (has_window, attached_processes, stdin_is_terminal) -> expected
+        // Fresh console from a console-less parent with piped stdin: hide.
+        assert!(should_hide_console(true, 1, false));
+        // No window (GUI/detached/CREATE_NO_WINDOW console): nothing to hide.
+        assert!(!should_hide_console(false, 1, false));
+        // Console shared with a shell (user terminal): never hide.
+        assert!(!should_hide_console(true, 2, false));
+        assert!(!should_hide_console(true, 5, false));
+        // Interactive stdin (e.g. terminal profile running git directly): keep.
+        assert!(!should_hide_console(true, 1, true));
+        assert!(!should_hide_console(false, 2, true));
     }
 
     // =========================================================================

@@ -48,6 +48,8 @@ mod commit_msg_hook_rewrite_note_loss;
 mod commit_post_stats_benchmark;
 mod config_cli_coverage;
 mod config_pattern_detection;
+#[cfg(windows)]
+mod console_self_hide;
 mod continue_cli;
 mod cross_repo_cwd_attribution;
 mod cursor;

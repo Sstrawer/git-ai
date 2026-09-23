@@ -36,6 +36,12 @@ fn is_superuser_exempt_command(args: &[String]) -> bool {
 }
 
 fn main() {
+    // Suppress console popups when a console-less parent (e.g. an agent
+    // runtime spawning `git` without window suppression) launches us. Runs
+    // before any dispatch so the window is hidden as early as possible.
+    #[cfg(windows)]
+    git_ai::utils::hide_console_if_unshared();
+
     // Get the binary name that was called
     let binary_name = std::env::args_os()
         .next()
