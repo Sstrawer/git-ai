@@ -1,0 +1,14 @@
+.github/workflows/release.yml
+  h_b343c3c4f99196 117-118,284,435,446
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "development:1.7.6",
+  "base_commit_sha": "cbf5e01419ff07596f19011cafd48666ecc5d775",
+  "prompts": {},
+  "humans": {
+    "h_b343c3c4f99196": {
+      "author": "yangtao <taoyangdd@isoftstone.com>"
+    }
+  }
+}
