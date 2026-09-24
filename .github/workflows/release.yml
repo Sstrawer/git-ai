@@ -402,6 +402,7 @@ jobs:
 
       - name: Copy MDM login-start scripts
         run: |
+          cp repo/mdm/macos/install-login-start.sh release/git-ai-login-start-macos.sh
           cp repo/mdm/linux/install-login-start.sh release/git-ai-login-start-linux.sh
           cp repo/mdm/windows/install-login-start.ps1 release/git-ai-login-start-windows.ps1
           chmod +x release/git-ai-login-start-*.sh
@@ -460,6 +461,7 @@ jobs:
 
             ### MDM login-start scripts
             Register `git-ai bg start` to run at login (see `mdm/README.md`):
+            - **macOS LaunchAgent**: `git-ai-login-start-macos.sh`
             - **Linux systemd user unit**: `git-ai-login-start-linux.sh`
             - **Windows Scheduled Task**: `git-ai-login-start-windows.ps1`
 
