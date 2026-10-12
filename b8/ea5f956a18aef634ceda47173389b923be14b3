@@ -1,0 +1,19 @@
+tests/integration/opencode.rs
+  s_5651eb2a91dc5f::t_60c08da7fb60bf 703-704
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b8ea5f956a18aef634ceda47173389b923be14b3",
+  "prompts": {},
+  "sessions": {
+    "s_5651eb2a91dc5f": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6acc3ed0bcd666bf5ad6ae58",
+        "model": "glm-5.3__dev"
+      },
+      "human_author": "Young242 <taoyangdd@isoftstone.com>"
+    }
+  }
+}
