@@ -1,0 +1,14 @@
+src/commands/install_hooks.rs
+  h_b343c3c4f99196 8,816-819,888-945,1300-1337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "development:1.7.6",
+  "base_commit_sha": "b001477ca714b4162ce7635432c9da02c357c97f",
+  "prompts": {},
+  "humans": {
+    "h_b343c3c4f99196": {
+      "author": "yangtao <taoyangdd@isoftstone.com>"
+    }
+  }
+}

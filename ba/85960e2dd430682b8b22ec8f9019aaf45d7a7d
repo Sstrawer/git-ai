@@ -1,0 +1,24 @@
+src/commands/checkpoint_agent/bash_tool.rs
+  h_b343c3c4f99196 390-394,396-397
+src/commands/checkpoint_agent/presets/trae.rs
+  h_b343c3c4f99196 1,22-27,30-45,86,98,221-347
+src/mdm/agents/mod.rs
+  h_b343c3c4f99196 14,33,64
+src/mdm/agents/trae_cli.rs
+  h_b343c3c4f99196 1-872
+tests/integration/bash_tool_conformance.rs
+  h_b343c3c4f99196 668-669,672-675,677,680-686
+tests/integration/trae.rs
+  h_b343c3c4f99196 32-55,181-264,367-452
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "development:1.7.6",
+  "base_commit_sha": "ba85960e2dd430682b8b22ec8f9019aaf45d7a7d",
+  "prompts": {},
+  "humans": {
+    "h_b343c3c4f99196": {
+      "author": "yangtao <taoyangdd@isoftstone.com>"
+    }
+  }
+}
