@@ -299,9 +299,17 @@ mod tests {
     fn test_opencode_plugin_content_is_valid_typescript() {
         let content = OPENCODE_PLUGIN_CONTENT;
 
-        assert!(content.contains("import { Plugin } from \"@opencode/plugin\""));
-        assert!(content.contains("@opencode/plugin"));
-        assert!(content.contains("export const GitAiPlugin = Plugin.define("));
+        // The plugin must NOT use a runtime (value) import of `@opencode/plugin`:
+        // OpenCode V1's plugin runtime cannot resolve that module (it only
+        // provides `@opencode-ai/plugin`), so a value import makes the whole
+        // plugin fail to load under V1. Type-only imports are erased at
+        // transpile time and safe for both versions; the definition itself is
+        // a plain object that V1 and V2 both accept.
+        assert!(!content.contains("import { Plugin } from \"@opencode/plugin\""));
+        assert!(content.contains("import type { Plugin } from \"@opencode/plugin\""));
+        assert!(!content.contains("Plugin.define"));
+        assert!(content.contains("export const GitAiPlugin"));
+        assert!(content.contains("id: \"git-ai\""));
         assert!(content.contains("export default {"));
         // V1 compatibility entrypoint (OpenCode 1.18.x calls `server()`)
         assert!(content.contains("async server("));

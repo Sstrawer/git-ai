@@ -6,10 +6,16 @@
  * code changes as human or AI-authored.
  *
  * Supports both plugin APIs from a single default export:
- *   - OpenCode V2 (`@opencode/plugin`): `setup(ctx)` registers the hooks through
+ *   - OpenCode V2: `setup(ctx)` registers the hooks through
  *     `ctx.tool.hook("execute.before" | "execute.after", ...)`.
- *   - OpenCode V1 (`@opencode-ai/plugin`, >= 1.18.29): `server()` returns the
- *     legacy `"tool.execute.before" | "tool.execute.after"` hook object.
+ *   - OpenCode V1 (>= 1.18.29): `server()` returns the legacy
+ *     `"tool.execute.before" | "tool.execute.after"` hook object.
+ *
+ * The definition is a plain `{ id, setup }` object: a runtime (value) import of
+ * `@opencode/plugin` cannot be resolved by V1's plugin runtime and would make
+ * the plugin fail to load under V1, while both versions accept a plain object.
+ * The type-only import below is erased at transpile time, so V1 never resolves
+ * the module and the definition still type-checks against the real V2 API.
  *
  * Installation:
  *   - Automatically installed by `git-ai install-hooks`
@@ -23,7 +29,7 @@
  * @see https://opencode.ai/v2/docs/build/plugins
  */
 
-import { Plugin } from "@opencode/plugin"
+import type { Plugin } from "@opencode/plugin"
 import { spawn } from "child_process"
 import { readFile, stat } from "fs/promises"
 import { dirname, isAbsolute, join, resolve } from "path"
@@ -518,9 +524,19 @@ const createGitAiCheckpoints = (defaultCwd: string) => {
  * Hooks are registered on the tool domain; the callback receives a single event
  * (`id`, `input`, `tool`, `sessionID`, and `status`/`result` after execution).
  */
-export const GitAiPlugin = Plugin.define({
+// Plain definition object: a runtime (value) import of the V2 plugin package
+// cannot be resolved by OpenCode V1's plugin runtime (it only provides the V1
+// package name), which would make the whole plugin fail to load under V1.
+// Both V1 and V2 accept a plain `{ id, setup }` definition; the type-only
+// import above is erased at transpile time and only provides the annotation.
+export const GitAiPlugin: Plugin.Plugin = {
   id: "git-ai",
   async setup(ctx) {
+    // OpenCode V1 also invokes `setup()` but with a bare context that has no
+    // tool domain; V1 hooks are registered through the `server()` entrypoint.
+    if (!ctx?.tool?.hook) {
+      return
+    }
     try {
       const defaultCwd =
         ctx.location?.project?.directory ?? ctx.location?.directory ?? process.cwd()
@@ -548,7 +564,7 @@ export const GitAiPlugin = Plugin.define({
       debugLog("failed to initialize plugin", error)
     }
   },
-})
+}
 
 /**
  * OpenCode V1 plugin implementation (`@opencode-ai/plugin`).
