@@ -41,3 +41,7 @@ fuzz/corpus/
 .worktrees/
 .claude/worktrees/
 
+# Local verification assets (docker clean-room & live e2e)
+.docker-verify/
+.e2e-live/
+
