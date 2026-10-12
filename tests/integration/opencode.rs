@@ -700,7 +700,8 @@ fn test_opencode_v2_model_and_parent_extracted_from_session_v2_table() {
     std::fs::copy(&fixture_db, storage_path.join("opencode.db")).unwrap();
 
     {
-        let conn = rusqlite::Connection::open(storage_path.join("opencode.db")).unwrap();
+        let conn =
+            git_ai::sqlite::open_with_memory_limits(storage_path.join("opencode.db")).unwrap();
         conn.execute(
             "CREATE TABLE session_v2 (
                 id text PRIMARY KEY,
