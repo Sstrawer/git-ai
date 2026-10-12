@@ -1023,6 +1023,24 @@ fn extract_model_from_opencode_sqlite(
                 .map(String::from)
         });
 
+    // OpenCode V2 stores sessions in the `session_v2` table with no `message`
+    // rows, keeping the model as a JSON column like {"id": "...", "providerID":
+    // "..."}. Fall back to it when the V1 message lookup misses.
+    let result = match (result, session_id) {
+        (Some(model), _) => Some(model),
+        (None, Some(sid)) => conn
+            .query_row("SELECT model FROM session_v2 WHERE id = ?", [sid], |row| {
+                row.get::<_, Option<String>>(0)
+            })
+            .ok()
+            .flatten()
+            .and_then(|raw| {
+                let json: serde_json::Value = serde_json::from_str(&raw).ok()?;
+                json.get("id").and_then(|v| v.as_str()).map(String::from)
+            }),
+        (None, None) => None,
+    };
+
     Ok(result)
 }
 

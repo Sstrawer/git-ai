@@ -161,6 +161,16 @@ impl OpenCodePreset {
         )
         .ok()
         .flatten()
+        // OpenCode V2 stores sessions in `session_v2` with no `session` row.
+        .or_else(|| {
+            conn.query_row(
+                "SELECT parent_id FROM session_v2 WHERE id = ?",
+                [session_id],
+                |row| row.get::<_, Option<String>>(0),
+            )
+            .ok()
+            .flatten()
+        })
     }
 
     fn opencode_data_path() -> Result<PathBuf, GitAiError> {

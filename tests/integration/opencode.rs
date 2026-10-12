@@ -688,4 +688,86 @@ fn test_opencode_checkpoint_sets_parent_session_id_from_db() {
     }
 }
 
+#[test]
+#[serial_test::serial]
+fn test_opencode_v2_model_and_parent_extracted_from_session_v2_table() {
+    // OpenCode V2 stores sessions in `session_v2` (with no `message` rows) and
+    // keeps the model as a JSON column like {"id": "...", "providerID": "..."}.
+    // Model/parent extraction must fall back to that table for V2 sessions.
+    let temp_storage = tempfile::tempdir().unwrap();
+    let storage_path = temp_storage.path();
+    let fixture_db = fixture_path("opencode-sqlite/opencode.db");
+    std::fs::copy(&fixture_db, storage_path.join("opencode.db")).unwrap();
+
+    {
+        let conn = rusqlite::Connection::open(storage_path.join("opencode.db")).unwrap();
+        conn.execute(
+            "CREATE TABLE session_v2 (
+                id text PRIMARY KEY,
+                project_id text NOT NULL,
+                parent_id text,
+                model text
+            )",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO session_v2 (id, project_id, parent_id, model) VALUES (?1, ?2, ?3, ?4)",
+            rusqlite::params![
+                "v2-session-789",
+                "project-1",
+                "v2-parent-session-012",
+                json!({"id": "agnes-2.5-flash", "providerID": "agnes"}).to_string()
+            ],
+        )
+        .unwrap();
+    }
+
+    unsafe {
+        std::env::set_var(
+            "GIT_AI_OPENCODE_STORAGE_PATH",
+            storage_path.to_str().unwrap(),
+        );
+    }
+
+    let hook_input = json!({
+        "hook_event_name": "PostToolUse",
+        "session_id": "v2-session-789",
+        "cwd": "/Users/test/project",
+        "tool_name": "edit",
+        "tool_use_id": "call-v2-001",
+        "tool_input": {
+            "filePath": "/Users/test/project/index.ts"
+        }
+    })
+    .to_string();
+
+    let events = parse_opencode(&hook_input).expect("Failed to run OpenCodePreset");
+
+    unsafe {
+        std::env::remove_var("GIT_AI_OPENCODE_STORAGE_PATH");
+    }
+
+    assert_eq!(events.len(), 1);
+    match &events[0] {
+        ParsedHookEvent::PostFileEdit(e) => {
+            assert_eq!(e.context.agent_id.tool, "opencode");
+            assert_eq!(
+                e.context.agent_id.model, "agnes-2.5-flash",
+                "V2 model must be extracted from the session_v2 model column"
+            );
+            let ts = e
+                .stream_source
+                .as_ref()
+                .expect("should have transcript source");
+            assert_eq!(
+                ts.external_parent_session_id,
+                Some("v2-parent-session-012".to_string()),
+                "V2 parent_id must be looked up from the session_v2 table"
+            );
+        }
+        _ => panic!("Expected PostFileEdit"),
+    }
+}
+
 crate::reuse_tests_in_worktree!(test_opencode_raw_event_fidelity,);
