@@ -1,0 +1,14 @@
+.gitignore
+  h_657eda151e6f32 44-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1c69ee11bfc5f80e53fa7816d0f1f8589d3fc64d",
+  "prompts": {},
+  "humans": {
+    "h_657eda151e6f32": {
+      "author": "Young242 <taoyangdd@isoftstone.com>"
+    }
+  }
+}
