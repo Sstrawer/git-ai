@@ -1,0 +1,23 @@
+src/commands/checkpoint_agent/presets/opencode.rs
+  s_5651eb2a91dc5f::t_c20a439a7d53f2 164-173
+src/streams/model_extraction.rs
+  s_5651eb2a91dc5f::t_bca371d3c3ef7c 1026-1043
+tests/integration/opencode.rs
+  s_5651eb2a91dc5f::t_6b9ac4c25b042d 691-772
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "78ff6182c6a5c5c099badf4b638715f832f40c99",
+  "prompts": {},
+  "sessions": {
+    "s_5651eb2a91dc5f": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6acc3ed0bcd666bf5ad6ae58",
+        "model": "glm-5.3__dev"
+      },
+      "human_author": "Young242 <taoyangdd@isoftstone.com>"
+    }
+  }
+}
