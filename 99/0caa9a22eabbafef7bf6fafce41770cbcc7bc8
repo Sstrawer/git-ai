@@ -1,0 +1,16 @@
+agent-support/opencode/git-ai.ts
+  h_657eda151e6f32 9,11-18,32,527-532,535-539,567
+src/mdm/agents/opencode.rs
+  h_657eda151e6f32 302-312
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "990caa9a22eabbafef7bf6fafce41770cbcc7bc8",
+  "prompts": {},
+  "humans": {
+    "h_657eda151e6f32": {
+      "author": "Young242 <taoyangdd@isoftstone.com>"
+    }
+  }
+}
